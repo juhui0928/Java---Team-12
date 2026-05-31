@@ -1,33 +1,49 @@
+package dormmate;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Map;
+
+/**
+ * [메인 GUI 화면 클래스]
+ * 역할: 프로그램의 전체 메인 창을 생성하고, JTabbedPane을 이용해
+ * 성향 입력, 룸메이트 매칭, 세탁기 예약 3가지 탭 화면을 유기적으로 연결합니다.
+ */
 
 public class MainFrame extends JFrame {
+	//기능별 서비스 클래스 및 현재 로그인 유저 객체 선언
     private MatchingService matchingService;
     private LaundrySystem laundrySystem;
-    private User currentUser;
+    private User currentUser;//나의 성향 입력 탭에서 저장된 사용자를 기억함
 
+    //성향 입력 탭 GUI 부품들
     private JTextField nameField, idField;
     private JComboBox<String> genderCombo; 
     private JComboBox<String> smokeCombo, drinkCombo, sleepCombo, cleanCombo, noiseCombo, callCombo, eatCombo;
-    private JTextArea logArea;
-
+    private JTextArea logArea;//화면 맨 아래 실시간 시스템 상황을 텍스트로 보여주는 로그창
+    
+    //세탁기 예약 탭 전용 인적사항 입력창
     private JTextField laundryIdField, laundryNameField;
     
+    //학생들의 데이터 누적 기록용 텍스트 파일
     private final String fileName = "students.txt"; 
 
     public MainFrame() {
+    	//프로그램 실행 시 매칭 서비스 및 세탁기 7대 관리 시스템 초기화
         matchingService = new MatchingService();
         laundrySystem = new LaundrySystem(7); 
-
+        
+        //메인 프레임 창의 기본적인 레이아웃 및 속성 문의 
         setTitle("기숙사 룸메이트 매칭 & 예약 시스템 v2");
         setSize(600, 680); 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
-
+        setDefaultCloseOperation(EXIT_ON_CLOSE);//x버튼 클릭 시 프로세스 종료
+        setLayout(new BorderLayout());//동서남북 구조의 레이아웃 배치 방식
+        
+        //3개의 주요 화면을 상단 탭 메뉴형태로 구성
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("나의 성향 입력", createProfilePanel());
         tabs.addTab("룸메이트 매칭", createMatchPanel());
@@ -35,11 +51,12 @@ public class MainFrame extends JFrame {
 
         add(tabs, BorderLayout.CENTER);
         
+        //화면 하단에 스크롤 기능이 포함된 실시간 시스템 모니터링 로그창
         logArea = new JTextArea(5, 50);
-        logArea.setEditable(false);
+        logArea.setEditable(false);//사용자가 임의로 글씨를 못쓰게 읽기 전용으로 설정
         add(new JScrollPane(logArea), BorderLayout.SOUTH);
         /*
-         * 프로그램 종료 시
+         * 프로그램 종료 시 자동 백업
          * 세탁기 예약 정보를 CSV 파일에 저장
          */
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -56,6 +73,11 @@ public class MainFrame extends JFrame {
             }
         });
     }
+    /**
+     * [화면 구성 1: 나의 성향 설문 입력 패널]
+     *GridLayout(11, 2) 방식을 사용하여 이름, 학번, 성별 및 성향 데이터 폼을 바둑판 배열로 정렬함.
+     * 점수나 숫자로 표기되던 가독성 떨어지는 메뉴를 한글 명사형 스케일 배열로 매핑해 직관성을 높임.
+     */
 
     private JPanel createProfilePanel() {
         JPanel p = new JPanel(new GridLayout(11, 2, 10, 10));
@@ -84,17 +106,19 @@ public class MainFrame extends JFrame {
             String id = idField.getText().trim();
             String name = nameField.getText().trim();
             String gender = (String) genderCombo.getSelectedItem(); 
-
+            
+            //이름이나 학번칸 공백 확인
             if(name.isEmpty() || id.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "이름과 학번을 입력하세요!");
                 return;
             }
-
+            //학번 규격에 맞는지 검사
             if (id.length() != 10) {
                 JOptionPane.showMessageDialog(this, "학번은 정확히 10자리여야 합니다!\n다시 입력해주세요.", "학번 입력 오류", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
+            
+            //매칭 연산용 데이터
             int smoking = smokeCombo.getSelectedIndex();
             int drinking = drinkCombo.getSelectedIndex() + 1;
             int sleep = sleepCombo.getSelectedIndex() + 1;
@@ -103,10 +127,12 @@ public class MainFrame extends JFrame {
             int call = callCombo.getSelectedIndex() + 1;
             int eating = eatCombo.getSelectedIndex();
 
+            //입력받은 정보들을 토대로한 구조화된 임시 유저 데이터 인스턴스
             Preference pref = new Preference(smoking, drinking, sleep, cleaning, noise, call, eating);
             User targetUser = new User(id, name, gender, pref);
 
             // 💡 [덮어쓰기 분기 로직 반영]
+            // 동일한 학번이 이미 등록되어 있는지 조회
             if (matchingService.isDuplicateId(id)) {
                 int reply = JOptionPane.showConfirmDialog(this, 
                         "이미 입력된 사람입니다. 기존 정보를 덮어씌우시겠습니까?", 
@@ -154,6 +180,11 @@ public class MainFrame extends JFrame {
         return p;
     }
 
+    /**
+     * [화면 구성 2: 룸메이트 매칭 결과 출력 패널]
+     * 역할: 성향 매칭 버튼을 누르면 나와 동일한 성별을 가진 매칭 데이터 풀 내에서 
+     * 우선순위 가중치가 곱해진 차이 점수를 내림차순 정렬하여 순위를 리스트 컴포넌트(JList)로 출력합니다.
+     */
     private JPanel createMatchPanel() {
         JPanel p = new JPanel(new BorderLayout());
         DefaultListModel<String> listModel = new DefaultListModel<>();
@@ -175,6 +206,12 @@ public class MainFrame extends JFrame {
         p.add(new JScrollPane(resultList), BorderLayout.CENTER);
         return p;
     }
+    
+    /**
+     * [화면 구성 3: 세탁실 배치도 기반 예약 레이아웃 패널]
+     * 구조: 상단에 독립 인적사항 입력 필드를 두고, 중앙에 세탁기 배치를 직관적으로 보이기 위해
+     * 3x3 GridLayout 구조틀 내에 매트릭스 배열 설계를 적용하여 실제 'ㄷ'자 모양 세탁실 동선을 시각화함.
+     */
 
     private JPanel createLaundryPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -219,6 +256,14 @@ public class MainFrame extends JFrame {
         return mainPanel;
     }
 
+    /**
+     * [세탁기별 세부 시간표 제어 및 예약 상태 변경 모달창]
+     * 동작 흐름:
+     * 1. 학번과 이름의 공백 유무 및 자리수 3차 예외 테스트 수행.
+     * 2. 선택한 세탁기의 예약 유무 상태 확인 후 버튼 컬러 피드백 다이내믹 변경 (PINK: 점유 / WHITE: 가용).
+     * 3. [미예약 타임 클릭]: 학번 기반 고유 키 정보 전달 및 예약 생성 + 10초 실시간 시뮬레이션 타이머 가동.
+     * 4. [예약 타임 클릭]: 타인 조작 차단을 위해 세탁기에 저장된 학번 정보를 추출하여 엄격한 본인 인증 후 취소 처리.
+     */
     private void showLaundryTimeTable(int machineNum) {
         String laundryName = laundryNameField.getText().trim();
         String laundryId = laundryIdField.getText().trim();

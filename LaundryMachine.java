@@ -1,4 +1,7 @@
+package dormmate;
+
 import java.util.HashMap;
+import java.util.Map;
 
 /*
 
@@ -38,11 +41,11 @@ private int id;
  * 시간대별 예약 정보를 저장하는 HashMap
  *
  * Key   : 시간대 인덱스
- *         0 = 09:00 ~ 11:00
- *         1 = 11:00 ~ 13:00
- *         2 = 13:00 ~ 15:00
- *         3 = 15:00 ~ 17:00
- *         4 = 17:00 ~ 19:00
+ * 0 = 09:00 ~ 11:00
+ * 1 = 11:00 ~ 13:00
+ * 2 = 13:00 ~ 15:00
+ * 3 = 15:00 ~ 17:00
+ * 4 = 17:00 ~ 19:00
  *
  * Value : "학번/이름"
  *
@@ -217,6 +220,5 @@ public Map<Integer, String> getSlots() {
 
     return slots;
 }
-
 
 }
