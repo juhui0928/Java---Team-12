@@ -1,5 +1,3 @@
-package dormmate;
-
 import javax.swing.*;
 import java.awt.*;
 import java.io.FileWriter;
@@ -40,6 +38,23 @@ public class MainFrame extends JFrame {
         logArea = new JTextArea(5, 50);
         logArea.setEditable(false);
         add(new JScrollPane(logArea), BorderLayout.SOUTH);
+        /*
+         * 프로그램 종료 시
+         * 세탁기 예약 정보를 CSV 파일에 저장
+         */
+        addWindowListener(new java.awt.event.WindowAdapter() {
+
+            @Override
+            public void windowClosing(
+                    java.awt.event.WindowEvent e) {
+
+                laundrySystem.saveReservations();
+
+                System.out.println(
+                        "[시스템] 예약 정보 저장 완료"
+                );
+            }
+        });
     }
 
     private JPanel createProfilePanel() {
@@ -236,12 +251,45 @@ public class MainFrame extends JFrame {
 
             slotBtn.addActionListener(e -> {
                 if (!machine.isReserved(slotIdx)) {
-                    if (machine.reserve(slotIdx, laundryName)) {
+                	if (machine.reserve(
+                	        slotIdx,
+                	        laundryId,
+                	        laundryName)) {
                         JOptionPane.showMessageDialog(null, slots[slotIdx] + " 예약되었습니다.");
                         logArea.append("[예약] " + machineNum + "번 세탁기 " + slots[slotIdx] + " 완료 (학번: " + laundryId + " / 이름: " + laundryName + ")\n");
                     }
+                	javax.swing.Timer timer =
+                	        new javax.swing.Timer(
+                	                10000,
+                	                event -> {
+
+                	                    machine.cancel(
+                	                            slotIdx,
+                	                            laundryId
+                	                    );
+
+                	                    JOptionPane.showMessageDialog(
+                	                            null,
+                	                            laundryName
+                	                            + "님의 세탁이 완료되었습니다."
+                	                    );
+
+                	                    logArea.append(
+                	                            "[사용완료] "
+                	                            + machineNum
+                	                            + "번 세탁기 "
+                	                            + slots[slotIdx]
+                	                            + " 완료\n"
+                	                    );
+                	                });
+
+                	timer.setRepeats(false);
+                	timer.start();
+                	
                 } else {
-                    if (machine.cancel(slotIdx, laundryName)) {
+                	if (machine.cancel(
+                	        slotIdx,
+                	        laundryId)) {
                         JOptionPane.showMessageDialog(null, "예약이 취소되었습니다.");
                         logArea.append("[취소] " + machineNum + "번 세탁기 " + slots[slotIdx] + " 취소 (" + laundryName + ")\n");
                     } else {
